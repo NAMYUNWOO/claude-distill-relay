@@ -33,7 +33,8 @@ Copy `.env.example` to `.env.relay` if needed.
 
 ## Deployment guides
 
-- `docs/DEPLOY_FIREAMULET.md` (fireamulet.com:9784 운영 가이드)
+- `docs/DEPLOY.md` (general deployment guide)
+- `docs/DEPLOY_FIREAMULET.md` (environment-specific example: fireamulet.com)
 
 ## systemd
 

@@ -1,5 +1,8 @@
 # Fireamulet 서버 배포 가이드 (Relay: 9784)
 
+> 이 문서는 **환경별 예시 가이드**입니다.
+> 일반 배포 절차는 `docs/DEPLOY.md`를 먼저 참고하세요.
+
 이 문서는 `claude-distill-relay`를 `fireamulet.com:9784`로 운영하기 위한 실전 체크리스트입니다.
 
 ## 0) 전제

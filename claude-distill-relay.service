@@ -1,0 +1,22 @@
+[Unit]
+Description=Claude Distill Relay Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=namyunwoo
+WorkingDirectory=/home/namyunwoo/.openclaw/workspace/myopenclaw
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/home/namyunwoo/.openclaw/workspace/myopenclaw/.env.relay
+ExecStart=/usr/bin/python3 /home/namyunwoo/.openclaw/workspace/myopenclaw/relay.py --port ${RELAY_PORT:-9784} --max-rooms ${RELAY_MAX_ROOMS:-1000} --room-ttl ${RELAY_ROOM_TTL:-1800} --max-msg-size ${RELAY_MAX_MSG_SIZE:-10485760}
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=false
+ReadWritePaths=/home/namyunwoo/.openclaw/workspace/myopenclaw
+
+[Install]
+WantedBy=multi-user.target

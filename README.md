@@ -31,6 +31,10 @@ python3 relay.py --port 9784
 
 Copy `.env.example` to `.env.relay` if needed.
 
+## Deployment guides
+
+- `docs/DEPLOY_FIREAMULET.md` (fireamulet.com:9784 운영 가이드)
+
 ## systemd
 
 Service file included:

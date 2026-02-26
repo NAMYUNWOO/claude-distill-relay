@@ -40,11 +40,9 @@ python3 relay.py --host 0.0.0.0 --port 9784
 
 Copy `.env.example` to `.env.relay` if needed.
 
-## Deployment guides
+## Deployment guide
 
-- `docs/ONECLICK_DEPLOY.md` (one-click deployment on server)
-- `docs/CLOUDFLARE_ZERO_TRUST.md` (Cloudflare Zero Trust / no public IP)
-- `docs/OPERATIONS_RUNBOOK.md` (production runbook: nginx + tunnel + verification)
+- `docs/DEPLOY.md` (single canonical guide: deploy + cloudflare + nginx + ops)
 
 ## systemd
 

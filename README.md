@@ -44,6 +44,7 @@ Copy `.env.example` to `.env.relay` if needed.
 
 - `docs/ONECLICK_DEPLOY.md` (one-click deployment on server)
 - `docs/CLOUDFLARE_ZERO_TRUST.md` (Cloudflare Zero Trust / no public IP)
+- `docs/OPERATIONS_RUNBOOK.md` (production runbook: nginx + tunnel + verification)
 
 ## systemd
 

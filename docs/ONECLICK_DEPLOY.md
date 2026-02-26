@@ -43,7 +43,13 @@ OPEN_UFW=0 ./scripts/deploy-oneclick.local.sh fireamulet.com 9784
 ./scripts/deploy-oneclick.local.sh relay.example.com 9784
 ```
 
-## 5) External connectivity test
+## 5) Optional nginx setup for relay hostname
+
+```bash
+./scripts/setup-nginx-relay.sh relay.fireamulet.com 9784
+```
+
+## 6) External connectivity test (public IP path)
 
 From another network:
 
@@ -53,9 +59,9 @@ nc -vz fireamulet.com 9784
 
 If success, clients can connect to `ws://fireamulet.com:9784`.
 
-## 6) If you use Cloudflare Zero Trust (no public IP)
+## 7) If you use Cloudflare Zero Trust (no public IP)
 
-Use this guide instead:
+Use this guide:
 - `docs/CLOUDFLARE_ZERO_TRUST.md`
 
 In that model, clients connect via:

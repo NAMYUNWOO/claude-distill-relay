@@ -31,23 +31,9 @@ python3 relay.py --port 9784
 
 Copy `.env.example` to `.env.relay` if needed.
 
-## Deployment guides
+## Deployment guide
 
-- `docs/DEPLOY.md` (general deployment guide)
-
-## One-command deploy
-
-```bash
-./scripts/deploy.sh
-```
-
-What it does:
-- pulls latest changes
-- creates `.env.relay` from `.env.example` if missing
-- installs/updates systemd unit
-- reloads systemd
-- enables + restarts the relay service
-- prints service status
+- `docs/ONECLICK_DEPLOY.md` (one-click deployment)
 
 ## systemd
 

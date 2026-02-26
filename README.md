@@ -34,7 +34,13 @@ Service file included:
 
 - `claude-distill-relay.service`
 
-Install manually:
+Install with helper script:
+
+```bash
+./scripts/install-systemd.sh
+```
+
+Or install manually:
 
 ```bash
 sudo cp claude-distill-relay.service /etc/systemd/system/

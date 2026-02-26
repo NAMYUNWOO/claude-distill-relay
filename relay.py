@@ -15,6 +15,7 @@ import random
 import string
 import struct
 import time
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -37,6 +38,8 @@ class Config:
     max_rooms: int = env_int("RELAY_MAX_ROOMS", 1000)
     room_ttl: int = env_int("RELAY_ROOM_TTL", 1800)
     max_msg_size: int = env_int("RELAY_MAX_MSG_SIZE", 10 * 1024 * 1024)
+    rate_limit_max: int = env_int("RELAY_RATE_LIMIT_MAX", 20)
+    rate_limit_window: int = env_int("RELAY_RATE_LIMIT_WINDOW", 60)
 
 
 @dataclass
@@ -63,6 +66,8 @@ class RelayServer:
         self.cfg = cfg
         self.rooms: dict[str, Room] = {}
         self.rooms_lock = asyncio.Lock()
+        self.rate_limit: dict[str, deque[float]] = defaultdict(deque)
+        self.rate_limit_lock = asyncio.Lock()
 
     async def send_msg(self, conn: Connection, obj: dict) -> bool:
         try:
@@ -95,6 +100,20 @@ class RelayServer:
             await conn.writer.wait_closed()
         except Exception:
             pass
+
+    async def is_rate_limited(self, ip: str) -> bool:
+        now = time.time()
+        window = self.cfg.rate_limit_window
+        limit = self.cfg.rate_limit_max
+        async with self.rate_limit_lock:
+            q = self.rate_limit[ip]
+            cutoff = now - window
+            while q and q[0] < cutoff:
+                q.popleft()
+            if len(q) >= limit:
+                return True
+            q.append(now)
+            return False
 
     def gen_room_id(self) -> str:
         return "".join(random.choice(ROOM_ID_ALPHABET) for _ in range(6))
@@ -251,6 +270,8 @@ class RelayServer:
     async def handle_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         conn_id = f"conn_{id(writer):x}"
         conn = Connection(conn_id=conn_id, reader=reader, writer=writer)
+        peer = writer.get_extra_info("peername")
+        peer_ip = peer[0] if isinstance(peer, tuple) and peer else "unknown"
 
         async def wait_closed_mark():
             try:
@@ -261,6 +282,11 @@ class RelayServer:
         waiter = asyncio.create_task(wait_closed_mark())
 
         try:
+            if await self.is_rate_limited(peer_ip):
+                await self.send_msg(conn, {"type": "ERROR", "reason": "rate_limited"})
+                await self.close_conn(conn)
+                return
+
             msg = await self.recv_msg(reader)
             if not isinstance(msg, dict):
                 await self.close_conn(conn)
@@ -326,6 +352,18 @@ def parse_args() -> argparse.Namespace:
         default=cfg.max_msg_size,
         help=f"Max message size bytes (default: {cfg.max_msg_size})",
     )
+    parser.add_argument(
+        "--rate-limit-max",
+        type=int,
+        default=cfg.rate_limit_max,
+        help=f"Max CREATE/JOIN attempts per IP in window (default: {cfg.rate_limit_max})",
+    )
+    parser.add_argument(
+        "--rate-limit-window",
+        type=int,
+        default=cfg.rate_limit_window,
+        help=f"Rate-limit window seconds (default: {cfg.rate_limit_window})",
+    )
     return parser.parse_args()
 
 
@@ -336,6 +374,8 @@ def main():
         max_rooms=args.max_rooms,
         room_ttl=args.room_ttl,
         max_msg_size=args.max_msg_size,
+        rate_limit_max=args.rate_limit_max,
+        rate_limit_window=args.rate_limit_window,
     )
     server = RelayServer(cfg)
     asyncio.run(server.serve())

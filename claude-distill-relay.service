@@ -6,17 +6,17 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=namyunwoo
-WorkingDirectory=/home/namyunwoo/.openclaw/workspace/myopenclaw
+WorkingDirectory=/home/namyunwoo/.openclaw/workspace/claude-distill-relay
 Environment=PYTHONUNBUFFERED=1
-EnvironmentFile=-/home/namyunwoo/.openclaw/workspace/myopenclaw/.env.relay
-ExecStart=/usr/bin/python3 /home/namyunwoo/.openclaw/workspace/myopenclaw/relay.py --port ${RELAY_PORT:-9784} --max-rooms ${RELAY_MAX_ROOMS:-1000} --room-ttl ${RELAY_ROOM_TTL:-1800} --max-msg-size ${RELAY_MAX_MSG_SIZE:-10485760}
+EnvironmentFile=-/home/namyunwoo/.openclaw/workspace/claude-distill-relay/.env.relay
+ExecStart=/usr/bin/python3 /home/namyunwoo/.openclaw/workspace/claude-distill-relay/relay.py --port ${RELAY_PORT:-9784} --max-rooms ${RELAY_MAX_ROOMS:-1000} --room-ttl ${RELAY_ROOM_TTL:-1800} --max-msg-size ${RELAY_MAX_MSG_SIZE:-10485760} --rate-limit-max ${RELAY_RATE_LIMIT_MAX:-20} --rate-limit-window ${RELAY_RATE_LIMIT_WINDOW:-60}
 Restart=always
 RestartSec=3
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=false
-ReadWritePaths=/home/namyunwoo/.openclaw/workspace/myopenclaw
+ReadWritePaths=/home/namyunwoo/.openclaw/workspace/claude-distill-relay
 
 [Install]
 WantedBy=multi-user.target

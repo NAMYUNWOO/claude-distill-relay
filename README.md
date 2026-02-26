@@ -11,6 +11,7 @@ A dumb TCP relay server for forwarding distillation sessions across networks.
 - Receiver disconnect notification (`PEER_DISCONNECTED`)
 - Room TTL cleanup (default 30 minutes)
 - Configurable max rooms and max message size
+- Per-IP rate limiting for CREATE/JOIN requests
 - No external dependencies (Python stdlib only)
 
 ## Run
@@ -25,6 +26,8 @@ python3 relay.py --port 9784
 - `RELAY_MAX_ROOMS` (default `1000`)
 - `RELAY_ROOM_TTL` (default `1800`)
 - `RELAY_MAX_MSG_SIZE` (default `10485760`)
+- `RELAY_RATE_LIMIT_MAX` (default `20`)
+- `RELAY_RATE_LIMIT_WINDOW` (default `60`, seconds)
 
 Copy `.env.example` to `.env.relay` if needed.
 
@@ -86,3 +89,10 @@ Event to sender:
 ```
 
 After this point, all framed messages are forwarded as-is in both directions.
+
+## Security notes
+
+- Relay never receives passphrase and does not decrypt payloads.
+- Add host firewall rules to only expose relay port.
+- Run behind TLS (reverse proxy or tunnel) for metadata protection.
+- Keep rate limits enabled (`RELAY_RATE_LIMIT_MAX`, `RELAY_RATE_LIMIT_WINDOW`).

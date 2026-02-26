@@ -4,9 +4,9 @@ set -euo pipefail
 # Usage:
 #   ./scripts/setup-nginx-relay.sh [relay-domain] [relay-port]
 # Example:
-#   ./scripts/setup-nginx-relay.sh relay.fireamulet.com 9784
+#   ./scripts/setup-nginx-relay.sh relay.example.com 9784
 
-RELAY_DOMAIN="${1:-relay.fireamulet.com}"
+RELAY_DOMAIN="${1:-relay.example.com}"
 RELAY_PORT="${2:-9784}"
 SITE_AVAILABLE="/etc/nginx/sites-available/${RELAY_DOMAIN}"
 SITE_ENABLED="/etc/nginx/sites-enabled/${RELAY_DOMAIN}"

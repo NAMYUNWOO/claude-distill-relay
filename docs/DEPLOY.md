@@ -9,9 +9,9 @@ This single document covers deployment, operations, verification, and troublesho
 Recommended end-to-end path:
 
 1. `claude-distill-relay` (WebSocket relay) listens on `127.0.0.1:9784`
-2. `nginx` proxies `relay.fireamulet.com` to `127.0.0.1:9784`
-3. `cloudflared tunnel` publishes `relay.fireamulet.com` to `http://localhost:80`
-4. Clients connect to `wss://relay.fireamulet.com`
+2. `nginx` proxies `relay.example.com` to `127.0.0.1:9784`
+3. `cloudflared tunnel` publishes `relay.example.com` to `http://localhost:80`
+4. Clients connect to `wss://relay.example.com`
 
 In short: external traffic uses WSS (443), internal traffic goes through nginx + relay.
 
@@ -29,8 +29,8 @@ In short: external traffic uses WSS (443), internal traffic goes through nginx +
 ## 3) One-time server deployment
 
 ```bash
-cd ~/.openclaw/workspace/claude-distill-relay
-./scripts/deploy-oneclick.local.sh fireamulet.com 9784
+cd /opt/claude-distill-relay
+./scripts/deploy-oneclick.local.sh relay.example.com 9784
 ```
 
 What the script does:
@@ -46,11 +46,11 @@ What the script does:
 ## 4) Configure nginx relay proxy
 
 ```bash
-cd ~/.openclaw/workspace/claude-distill-relay
-./scripts/setup-nginx-relay.sh relay.fireamulet.com 9784
+cd /opt/claude-distill-relay
+./scripts/setup-nginx-relay.sh relay.example.com 9784
 ```
 
-After this, nginx proxies `relay.fireamulet.com` traffic to the relay service.
+After this, nginx proxies `relay.example.com` traffic to the relay service.
 
 ---
 
@@ -61,13 +61,13 @@ Path:
 
 Values:
 - Subdomain: `relay`
-- Domain: `fireamulet.com`
+- Domain: `example.com`
 - Path: (empty)
 - Service Type: `HTTP`
 - URL: `localhost:80`
 
 Final public endpoint:
-- `wss://relay.fireamulet.com`
+- `wss://relay.example.com`
 
 > Do not use the private hostname route screen (`www.example.local`) for this use case.
 
@@ -101,7 +101,7 @@ python3 - <<'PY'
 import asyncio, websockets
 
 async def main():
-    async with websockets.connect("wss://relay.fireamulet.com") as ws:
+    async with websockets.connect("wss://relay.example.com") as ws:
         await ws.send('{"type":"CREATE_ROOM"}')
         print(await ws.recv())
 
@@ -138,7 +138,7 @@ sudo systemctl restart cloudflared
 2. Port 9784 is listening (`ss -ltnp | grep 9784`)
 3. Nginx config is valid (`nginx -t`)
 4. Tunnel is connected (`systemctl status cloudflared`)
-5. Published route is `relay.fireamulet.com -> localhost:80`
+5. Published route is `relay.example.com -> localhost:80`
 
 ---
 

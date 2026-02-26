@@ -4,3 +4,4 @@ __pycache__/
 
 docs/DEPLOY_FIREAMULET.md
 scripts/deploy-oneclick.local.sh
+.venv/

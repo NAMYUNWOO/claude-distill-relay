@@ -1,3 +1,5 @@
 .env.relay
 __pycache__/
 *.pyc
+
+docs/DEPLOY_FIREAMULET.md

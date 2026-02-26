@@ -34,7 +34,20 @@ Copy `.env.example` to `.env.relay` if needed.
 ## Deployment guides
 
 - `docs/DEPLOY.md` (general deployment guide)
-- `docs/DEPLOY_FIREAMULET.md` (environment-specific example: fireamulet.com)
+
+## One-command deploy
+
+```bash
+./scripts/deploy.sh
+```
+
+What it does:
+- pulls latest changes
+- creates `.env.relay` from `.env.example` if missing
+- installs/updates systemd unit
+- reloads systemd
+- enables + restarts the relay service
+- prints service status
 
 ## systemd
 

@@ -2,14 +2,20 @@
 
 This guide assumes you are deploying on the target Linux server directly.
 
-## 1) Run one command
+## 1) Install dependency
+
+```bash
+python3 -m pip install websockets
+```
+
+## 2) Run one command
 
 ```bash
 cd ~/.openclaw/workspace/claude-distill-relay
 ./scripts/deploy-oneclick.local.sh fireamulet.com 9784
 ```
 
-## 2) What it does automatically
+## 3) What it does automatically
 
 - updates source (`git pull`)
 - ensures `.env.relay` exists
@@ -20,7 +26,7 @@ cd ~/.openclaw/workspace/claude-distill-relay
 - checks public IP and DNS
 - prints final relay endpoint
 
-## 3) Optional
+## 4) Optional
 
 - Skip firewall step:
 
@@ -34,7 +40,7 @@ OPEN_UFW=0 ./scripts/deploy-oneclick.local.sh fireamulet.com 9784
 ./scripts/deploy-oneclick.local.sh relay.example.com 9784
 ```
 
-## 4) External connectivity test
+## 5) External connectivity test
 
 From another network:
 
@@ -42,4 +48,4 @@ From another network:
 nc -vz fireamulet.com 9784
 ```
 
-If success, clients can connect to `fireamulet.com:9784`.
+If success, clients can connect to `ws://fireamulet.com:9784` (or `wss://...` behind TLS proxy).

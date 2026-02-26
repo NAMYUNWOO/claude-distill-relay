@@ -9,7 +9,7 @@ User=namyunwoo
 WorkingDirectory=/home/namyunwoo/.openclaw/workspace/claude-distill-relay
 Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=-/home/namyunwoo/.openclaw/workspace/claude-distill-relay/.env.relay
-ExecStart=/usr/bin/python3 /home/namyunwoo/.openclaw/workspace/claude-distill-relay/relay.py --port ${RELAY_PORT} --max-rooms ${RELAY_MAX_ROOMS} --room-ttl ${RELAY_ROOM_TTL} --max-msg-size ${RELAY_MAX_MSG_SIZE} --rate-limit-max ${RELAY_RATE_LIMIT_MAX} --rate-limit-window ${RELAY_RATE_LIMIT_WINDOW}
+ExecStart=/usr/bin/python3 /home/namyunwoo/.openclaw/workspace/claude-distill-relay/relay.py --host ${RELAY_HOST} --port ${RELAY_PORT} --max-rooms ${RELAY_MAX_ROOMS} --room-ttl ${RELAY_ROOM_TTL} --max-msg-size ${RELAY_MAX_MSG_SIZE} --rate-limit-max ${RELAY_RATE_LIMIT_MAX} --rate-limit-window ${RELAY_RATE_LIMIT_WINDOW}
 Restart=always
 RestartSec=3
 NoNewPrivileges=true

@@ -1,10 +1,10 @@
 # Claude Distill Relay Server
 
-A dumb TCP relay server for forwarding distillation sessions across networks.
+A dumb **WebSocket** relay server for forwarding distillation sessions across networks.
 
 ## Features
 
-- Raw TCP relay with 4-byte big-endian length framing
+- WebSocket relay (`ws://` / `wss://`)
 - Room-based pairing (`CREATE_ROOM`, `JOIN_ROOM`)
 - 6-char room IDs (`[a-z0-9]{6}`)
 - Transparent bidirectional forwarding after pairing
@@ -12,16 +12,25 @@ A dumb TCP relay server for forwarding distillation sessions across networks.
 - Room TTL cleanup (default 30 minutes)
 - Configurable max rooms and max message size
 - Per-IP rate limiting for CREATE/JOIN requests
-- No external dependencies (Python stdlib only)
+- Lightweight dependency: `websockets`
 
 ## Run
 
+Install dependency first:
+
 ```bash
-python3 relay.py --port 9784
+python3 -m pip install websockets
+```
+
+Run server:
+
+```bash
+python3 relay.py --host 0.0.0.0 --port 9784
 ```
 
 ## Environment variables
 
+- `RELAY_HOST` (default `0.0.0.0`)
 - `RELAY_PORT` (default `9784`)
 - `RELAY_MAX_ROOMS` (default `1000`)
 - `RELAY_ROOM_TTL` (default `1800`)
@@ -92,7 +101,7 @@ Event to sender:
 {"type":"PEER_JOINED","peer_id":"conn_xxxx"}
 ```
 
-After this point, all framed messages are forwarded as-is in both directions.
+After this point, all WebSocket frames are forwarded as-is in both directions.
 
 ## Security notes
 

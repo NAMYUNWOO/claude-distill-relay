@@ -2,6 +2,9 @@
 
 This guide assumes you are deploying on the target Linux server directly.
 
+> This script deploys the relay service on the server itself.
+> Public reachability still depends on your network path (public IP / DNS / tunnel).
+
 ## 1) Install dependency
 
 ```bash
@@ -48,4 +51,12 @@ From another network:
 nc -vz fireamulet.com 9784
 ```
 
-If success, clients can connect to `ws://fireamulet.com:9784` (or `wss://...` behind TLS proxy).
+If success, clients can connect to `ws://fireamulet.com:9784`.
+
+## 6) If you use Cloudflare Zero Trust (no public IP)
+
+Use this guide instead:
+- `docs/CLOUDFLARE_ZERO_TRUST.md`
+
+In that model, clients connect via:
+- `wss://relay.yourdomain.com`

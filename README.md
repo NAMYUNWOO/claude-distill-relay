@@ -12,6 +12,7 @@ A dumb **WebSocket** relay server for forwarding distillation sessions across ne
 - Room TTL cleanup (default 30 minutes)
 - Configurable max rooms and max message size
 - Per-IP rate limiting for CREATE/JOIN requests
+- Daily request/processing stats + JSONL event logging
 - Lightweight dependency: `websockets`
 
 ## Run
@@ -37,6 +38,11 @@ python3 relay.py --host 0.0.0.0 --port 9784
 - `RELAY_MAX_MSG_SIZE` (default `10485760`)
 - `RELAY_RATE_LIMIT_MAX` (default `20`)
 - `RELAY_RATE_LIMIT_WINDOW` (default `60`, seconds)
+- `RELAY_LOG_DIR` (default `logs`)
+
+Runtime log outputs:
+- `<RELAY_LOG_DIR>/relay-events.jsonl` (event stream)
+- `<RELAY_LOG_DIR>/daily-stats.json` (daily counters)
 
 Copy `.env.example` to `.env.relay` if needed.
 

@@ -16,6 +16,8 @@ import string
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from websockets.asyncio.server import serve
@@ -43,6 +45,7 @@ class Config:
     max_msg_size: int = env_int("RELAY_MAX_MSG_SIZE", 10 * 1024 * 1024)
     rate_limit_max: int = env_int("RELAY_RATE_LIMIT_MAX", 20)
     rate_limit_window: int = env_int("RELAY_RATE_LIMIT_WINDOW", 60)
+    log_dir: str = os.getenv("RELAY_LOG_DIR", "logs")
 
 
 @dataclass
@@ -63,6 +66,46 @@ class Room:
     closed: bool = False
 
 
+class StatsTracker:
+    def __init__(self, log_dir: str):
+        self.log_dir = Path(log_dir)
+        self.events_path = self.log_dir / "relay-events.jsonl"
+        self.daily_path = self.log_dir / "daily-stats.json"
+        self.lock = asyncio.Lock()
+
+    def _now_iso(self) -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _day_key(self) -> str:
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    async def record_event(self, event: str, **kwargs):
+        payload = {"ts": self._now_iso(), "event": event, **kwargs}
+        await self._append_jsonl(payload)
+        await self._bump_daily(event)
+
+    async def _append_jsonl(self, payload: dict):
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        line = json.dumps(payload, ensure_ascii=False)
+        async with self.lock:
+            with self.events_path.open("a", encoding="utf-8") as f:
+                f.write(line + "\n")
+
+    async def _bump_daily(self, event: str):
+        day = self._day_key()
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        async with self.lock:
+            stats = {}
+            if self.daily_path.exists():
+                try:
+                    stats = json.loads(self.daily_path.read_text(encoding="utf-8"))
+                except Exception:
+                    stats = {}
+            daily = stats.setdefault(day, {})
+            daily[event] = int(daily.get(event, 0)) + 1
+            self.daily_path.write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 class RelayServer:
     def __init__(self, cfg: Config):
         self.cfg = cfg
@@ -70,6 +113,7 @@ class RelayServer:
         self.rooms_lock = asyncio.Lock()
         self.rate_limit: dict[str, deque[float]] = defaultdict(deque)
         self.rate_limit_lock = asyncio.Lock()
+        self.stats = StatsTracker(cfg.log_dir)
 
     async def send_json(self, conn: Connection, obj: dict) -> bool:
         try:
@@ -203,7 +247,9 @@ class RelayServer:
                     await self.close_room(room)
                     break
 
+                await self.stats.record_event("relay_started", room_id=room.room_id, peer_id=receiver.conn_id)
                 await self.relay_pair(sender, receiver)
+                await self.stats.record_event("relay_finished", room_id=room.room_id, peer_id=receiver.conn_id)
 
                 if not sender.closed.is_set():
                     await self.send_json(sender, {"type": "PEER_DISCONNECTED", "peer_id": receiver.conn_id})
@@ -224,13 +270,15 @@ class RelayServer:
         if not room.closed:
             await self.close_room(room)
 
-    async def handle_create_room(self, conn: Connection):
+    async def handle_create_room(self, conn: Connection, peer_ip: str):
         room = await self.create_room(conn)
         if not room:
+            await self.stats.record_event("create_room_rejected", peer_ip=peer_ip, reason="too_many_rooms")
             await self.send_json(conn, {"type": "ERROR", "reason": "too_many_rooms"})
             await self.close_conn(conn)
             return
 
+        await self.stats.record_event("room_created", peer_ip=peer_ip, room_id=room.room_id)
         await self.send_json(conn, {"type": "ROOM_CREATED", "room_id": room.room_id})
 
         sender_task = asyncio.create_task(self.sender_loop(room))
@@ -242,23 +290,27 @@ class RelayServer:
             monitor_task.cancel()
             await self.close_room(room)
 
-    async def handle_join_room(self, conn: Connection, room_id: str):
+    async def handle_join_room(self, conn: Connection, room_id: str, peer_ip: str):
         if not room_id or len(room_id) != 6 or any(c not in ROOM_ID_ALPHABET for c in room_id):
+            await self.stats.record_event("join_room_rejected", peer_ip=peer_ip, reason="room_not_found")
             await self.send_json(conn, {"type": "ERROR", "reason": "room_not_found"})
             await self.close_conn(conn)
             return
 
         room = await self.get_room(room_id)
         if not room or room.closed:
+            await self.stats.record_event("join_room_rejected", peer_ip=peer_ip, room_id=room_id, reason="room_not_found")
             await self.send_json(conn, {"type": "ERROR", "reason": "room_not_found"})
             await self.close_conn(conn)
             return
 
         ok = await self.send_json(conn, {"type": "ROOM_JOINED", "room_id": room.room_id})
         if not ok:
+            await self.stats.record_event("join_room_rejected", peer_ip=peer_ip, room_id=room_id, reason="send_failed")
             await self.close_conn(conn)
             return
 
+        await self.stats.record_event("room_joined", peer_ip=peer_ip, room_id=room_id)
         await room.receiver_queue.put(conn)
         await conn.relay_done.wait()
         await self.close_conn(conn)
@@ -271,22 +323,26 @@ class RelayServer:
 
         try:
             if await self.is_rate_limited(peer_ip):
+                await self.stats.record_event("request_rejected", peer_ip=peer_ip, reason="rate_limited")
                 await self.send_json(conn, {"type": "ERROR", "reason": "rate_limited"})
                 await self.close_conn(conn)
                 return
 
             msg = await self.recv_json(conn)
             if not isinstance(msg, dict):
+                await self.stats.record_event("request_rejected", peer_ip=peer_ip, reason="invalid_request")
                 await self.send_json(conn, {"type": "ERROR", "reason": "invalid_request"})
                 await self.close_conn(conn)
                 return
 
             msg_type = msg.get("type")
+            await self.stats.record_event("request_received", peer_ip=peer_ip, type=str(msg_type))
             if msg_type == "CREATE_ROOM":
-                await self.handle_create_room(conn)
+                await self.handle_create_room(conn, peer_ip)
             elif msg_type == "JOIN_ROOM":
-                await self.handle_join_room(conn, str(msg.get("room_id", "")))
+                await self.handle_join_room(conn, str(msg.get("room_id", "")), peer_ip)
             else:
+                await self.stats.record_event("request_rejected", peer_ip=peer_ip, reason="invalid_type", type=str(msg_type))
                 await self.send_json(conn, {"type": "ERROR", "reason": "invalid_request"})
                 await self.close_conn(conn)
         finally:
@@ -307,6 +363,7 @@ class RelayServer:
 
     async def serve(self):
         print(f"Relay (WebSocket) listening on ws://{self.cfg.host}:{self.cfg.port}")
+        print(f"Metrics/logging enabled: {self.cfg.log_dir}")
         cleanup_task = asyncio.create_task(self.cleanup_expired_rooms())
         try:
             async with serve(self.handle_ws, self.cfg.host, self.cfg.port, max_size=self.cfg.max_msg_size):
@@ -325,6 +382,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-msg-size", type=int, default=cfg.max_msg_size)
     parser.add_argument("--rate-limit-max", type=int, default=cfg.rate_limit_max)
     parser.add_argument("--rate-limit-window", type=int, default=cfg.rate_limit_window)
+    parser.add_argument("--log-dir", type=str, default=cfg.log_dir)
     return parser.parse_args()
 
 
@@ -338,6 +396,7 @@ def main():
         max_msg_size=args.max_msg_size,
         rate_limit_max=args.rate_limit_max,
         rate_limit_window=args.rate_limit_window,
+        log_dir=args.log_dir,
     )
     server = RelayServer(cfg)
     asyncio.run(server.serve())

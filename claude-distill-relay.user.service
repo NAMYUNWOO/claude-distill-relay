@@ -1,11 +1,10 @@
 [Unit]
-Description=Claude Distill Relay Server
+Description=Claude Distill Relay Server (user)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=namyunwoo
 WorkingDirectory=/home/namyunwoo/.openclaw/workspace/claude-distill-relay
 Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=-/home/namyunwoo/.openclaw/workspace/claude-distill-relay/.env.relay
@@ -19,4 +18,4 @@ ProtectHome=false
 ReadWritePaths=/home/namyunwoo/.openclaw/workspace/claude-distill-relay
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

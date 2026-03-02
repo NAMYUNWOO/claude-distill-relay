@@ -56,10 +56,20 @@ Service file included:
 
 - `claude-distill-relay.service`
 
-Install with helper script:
+Install with helper script (system-level, requires sudo):
 
 ```bash
 ./scripts/install-systemd.sh
+```
+
+User-level fallback (no sudo):
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp claude-distill-relay.service ~/.config/systemd/user/claude-distill-relay.service
+# remove User= line and set WantedBy=default.target for user service
+systemctl --user daemon-reload
+systemctl --user enable --now claude-distill-relay.service
 ```
 
 Or install manually:
@@ -108,6 +118,18 @@ Event to sender:
 ```
 
 After this point, all WebSocket frames are forwarded as-is in both directions.
+
+## Cron health check
+
+Run relay health check every 5 minutes (with auto-restart on failure):
+
+```bash
+(crontab -l 2>/dev/null | grep -v 'claude-distill-relay/scripts/healthcheck-cron.sh' ; \
+ echo '*/5 * * * * /home/namyunwoo/.openclaw/workspace/claude-distill-relay/scripts/healthcheck-cron.sh') | crontab -
+```
+
+Health logs:
+- `logs/healthcheck.log`
 
 ## Security notes
 

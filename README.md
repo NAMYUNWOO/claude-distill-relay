@@ -124,8 +124,9 @@ After this point, all WebSocket frames are forwarded as-is in both directions.
 Run relay health check every 5 minutes (with auto-restart on failure):
 
 ```bash
+REPO_DIR="$HOME/.openclaw/workspace/claude-distill-relay"
 (crontab -l 2>/dev/null | grep -v 'claude-distill-relay/scripts/healthcheck-cron.sh' ; \
- echo '*/5 * * * * /home/namyunwoo/.openclaw/workspace/claude-distill-relay/scripts/healthcheck-cron.sh') | crontab -
+ echo "*/5 * * * * ${REPO_DIR}/scripts/healthcheck-cron.sh") | crontab -
 ```
 
 Health logs:

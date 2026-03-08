@@ -212,22 +212,35 @@ class RelayServer:
 
         await self.close_conn(room.sender)
 
-    async def forward(self, src: Connection, dst: Connection):
-        while True:
-            msg = await src.ws.recv()
-            size = len(msg) if isinstance(msg, bytes) else len(msg.encode("utf-8"))
-            if size <= 0 or size > self.cfg.max_msg_size:
-                raise ConnectionError("invalid_message_size")
-            await dst.ws.send(msg)
-
-    async def relay_pair(self, sender: Connection, receiver: Connection):
+    async def _forward_until_closed(self, src: Connection, dst: Connection, label: str):
         try:
-            await asyncio.gather(
-                self.forward(sender, receiver),
-                self.forward(receiver, sender),
-            )
+            while True:
+                msg = await src.ws.recv()
+                size = len(msg) if isinstance(msg, bytes) else len(msg.encode("utf-8"))
+                if size <= 0 or size > self.cfg.max_msg_size:
+                    raise ConnectionError("invalid_message_size")
+                await dst.ws.send(msg)
         except (ConnectionClosed, ConnectionError, OSError):
             pass
+        except asyncio.CancelledError:
+            pass
+
+    async def relay_pair(self, sender: Connection, receiver: Connection):
+        """Bidirectional relay. Returns when either direction fails.
+        Preserves sender's WebSocket connection."""
+        s2r = asyncio.create_task(self._forward_until_closed(sender, receiver, "s2r"))
+        r2s = asyncio.create_task(self._forward_until_closed(receiver, sender, "r2s"))
+
+        done, pending = await asyncio.wait(
+            [s2r, r2s], return_when=asyncio.FIRST_COMPLETED
+        )
+
+        for task in pending:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
     async def sender_loop(self, room: Room):
         sender = room.sender
@@ -251,14 +264,16 @@ class RelayServer:
                 await self.relay_pair(sender, receiver)
                 await self.stats.record_event("relay_finished", room_id=room.room_id, peer_id=receiver.conn_id)
 
-                if not sender.closed.is_set():
-                    await self.send_json(sender, {"type": "PEER_DISCONNECTED", "peer_id": receiver.conn_id})
-
                 room.active_receiver = None
                 receiver.relay_done.set()
                 await self.close_conn(receiver)
 
                 if sender.closed.is_set():
+                    await self.close_room(room)
+                    break
+
+                ok = await self.send_json(sender, {"type": "PEER_DISCONNECTED", "peer_id": receiver.conn_id})
+                if not ok:
                     await self.close_room(room)
                     break
         finally:
